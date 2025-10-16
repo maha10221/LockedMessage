@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Locked Message App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        body {
+          background: linear-gradient(135deg, #1f1c2c, #928dab);
+          color: #fff;
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .glass-card {
+          background: rgba(255, 255, 255, 0.15);
+          backdrop-filter: blur(10px);
+          border-radius: 20px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+          padding: 30px;
+          width: 420px;
+          text-align: center;
+          animation: fadeIn 0.8s ease-in-out;
+        }
+        @keyframes fadeIn { from {opacity:0; transform:translateY(20px);} to {opacity:1; transform:translateY(0);} }
+        .btn-toggle { margin: 5px; width: 140px; font-weight: bold; }
+        .hidden { display: none; }
+        h1 { font-weight: bold; margin-bottom: 20px; color: #fff; }
+        input.form-control, textarea.form-control { border-radius: 12px; padding: 12px; font-size: 16px; }
+        button { border-radius: 12px; }
+        .result-box { margin-top:20px; padding:12px; background: rgba(0,0,0,0.3); border-radius:12px; color:#fff; font-weight:bold; word-wrap: break-word; }
+        .char-counter { font-size: 14px; margin-top: 4px; text-align: right; opacity: 0.9; }
+        .char-counter.exceed { color:#ff7070; font-weight:bold; }
+
+        /* Social Icons Colors */
+        .social-icons a {
+            font-size: 24px;
+            margin: 0 10px;
+            transition: transform 0.3s ease, color 0.3s ease;
+        }
+        .social-icons a[href*="linkedin"] { color: #0A66C2; }
+        .social-icons a[href*="github"] { color: #ffffff; }
+        .social-icons a[href*="vercel"] { color: #FFD700; }
+        .social-icons a:hover { transform: scale(1.2); opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+<div class="glass-card">
+    <h1>🔐 Locked Message</h1>
+
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill"></i>
+        <span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Toggle Buttons -->
+    <div class="d-flex justify-content-center mb-4">
+        <button id="encryptBtn" class="btn btn-primary btn-toggle">Encrypt</button>
+        <button id="decryptBtn" class="btn btn-outline-light btn-toggle">Decrypt</button>
+    </div>
+
+    <!-- Encrypt Form -->
+    <form id="encryptForm" action="/encrypt" method="post" th:object="${encryptRequest}">
+        <div class="mb-3">
+            <textarea name="message" id="messageInput" rows="3" class="form-control" placeholder="Enter your message" required></textarea>
+            <div id="messageCount" class="char-counter">0 characters | 0 words</div>
+        </div>
+        <div class="mb-3">
+            <input type="password" id="passwordInput" name="password" class="form-control" placeholder="Enter your password" required>
+            <div id="passwordCount" class="char-counter">0 characters</div>
+        </div>
+        <button type="submit" class="btn btn-success w-100">Generate Secret Key</button>
+    </form>
+
+    <!-- Decrypt Form -->
+    <form id="decryptForm" class="hidden" action="/decrypt" method="post" th:object="${decryptRequest}">
+        <div class="mb-3">
+            <input type="text" name="secret" class="form-control" placeholder="Enter your secret key" required>
+        </div>
+        <div class="mb-3">
+            <input type="password" name="password" class="form-control" placeholder="Enter your password" required>
+        </div>
+        <button type="submit" class="btn btn-warning w-100">Decrypt Message</button>
+    </form>
+
+    <div class="result-box" th:if="${result}" th:text="${result}"></div>
+</div>
+
+<footer class="mt-4 text-center">
+    <div class="social-icons">
+        <a href="https://maheshbabugarnepudi.vercel.app/" target="_blank" title="Portfolio"><i class="bi bi-globe"></i></a>
+        <a href="https://www.linkedin.com/in/maheshbabugarnepudi" target="_blank" title="LinkedIn"><i class="bi bi-linkedin"></i></a>
+        <a href="https://github.com/Maha10221" target="_blank" title="GitHub"><i class="bi bi-github"></i></a>
+    </div>
+    <div class="mt-2 small opacity-75">© 2025 Mahesh Garnepudi. All Rights Reserved.</div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const encryptBtn = document.getElementById('encryptBtn');
+    const decryptBtn = document.getElementById('decryptBtn');
+    const encryptForm = document.getElementById('encryptForm');
+    const decryptForm = document.getElementById('decryptForm');
+    const messageInput = document.getElementById('messageInput');
+    const passwordInput = document.getElementById('passwordInput');
+    const messageCount = document.getElementById('messageCount');
+    const passwordCount = document.getElementById('passwordCount');
+
+    const MAX_LENGTH = 1000;
+    const MAX_WORDS = 160;
+
+    // Toggle forms
+    encryptBtn.addEventListener('click', () => {
+      encryptForm.classList.remove('hidden');
+      decryptForm.classList.add('hidden');
+      encryptBtn.classList.replace('btn-outline-light','btn-primary');
+      decryptBtn.classList.replace('btn-primary','btn-outline-light');
+    });
+    decryptBtn.addEventListener('click', () => {
+      decryptForm.classList.remove('hidden');
+      encryptForm.classList.add('hidden');
+      decryptBtn.classList.replace('btn-outline-light','btn-primary');
+      encryptBtn.classList.replace('btn-primary','btn-outline-light');
+    });
+
+    // Count words
+    function countWords(str) {
+      return str.trim() === '' ? 0 : str.trim().split(/\s+/).length;
+    }
+
+    // Update message counter
+    function updateMessageCounter() {
+      const charLength = messageInput.value.length;
+      const wordCount = countWords(messageInput.value);
+      messageCount.textContent = `${charLength} characters | ${wordCount} words`;
+      if (charLength > MAX_LENGTH || wordCount > MAX_WORDS) {
+        messageCount.classList.add('exceed');
+      } else {
+        messageCount.classList.remove('exceed');
+      }
+    }
+
+    function updatePasswordCounter() {
+      const len = passwordInput.value.length;
+      passwordCount.textContent = `${len} characters`;
+      if (len > MAX_LENGTH) {
+        passwordCount.classList.add('exceed');
+      } else {
+        passwordCount.classList.remove('exceed');
+      }
+    }
+
+    messageInput.addEventListener('input', updateMessageCounter);
+    passwordInput.addEventListener('input', updatePasswordCounter);
+
+    encryptForm.addEventListener('submit', (e) => {
+      const charLength = messageInput.value.length;
+      const wordCount = countWords(messageInput.value);
+      if (charLength > MAX_LENGTH || passwordInput.value.length > MAX_LENGTH || wordCount > MAX_WORDS) {
+        e.preventDefault();
+        alert(`❌ Cannot submit!\nCharacters: ${charLength} (max ${MAX_LENGTH})\nWords: ${wordCount} (max ${MAX_WORDS})`);
+      }
+    });
+</script>
+
+</body>
+</html>

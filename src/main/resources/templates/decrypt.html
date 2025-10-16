@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <title>Decrypt</title>
+</head>
+<body>
+<h1>Decrypt a Message</h1>
+<form action="/decrypt" method="post">
+  <label>Secret Key:</label>
+  <input type="text" name="secret" required><br><br>
+  <label>Password:</label>
+  <input type="password" name="password" required><br><br>
+  <button type="submit">Decrypt</button>
+</form>
+<p th:if="${result}" th:text="${result}"></p>
+<a href="/">Back to Home</a>
+</body>
+</html>
